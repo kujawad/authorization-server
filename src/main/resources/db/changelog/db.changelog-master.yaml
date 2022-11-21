@@ -1,0 +1,91 @@
+databaseChangeLog:
+  - property:
+      name: uuid_type
+      value: uuid
+      dbms: postgresql
+  - property:
+      name: uuid_function
+      value: "extensions.uuid_generate_v4()"
+      dbms: postgresql
+  - logicalFilePath: "classpath:db/changelog/db.changelog-master.yaml"
+  - changeSet:
+      id: "INIT"
+      author: "kujawad"
+      changes:
+        - sqlFile:
+            path: "src/main/resources/db/changelog/oauth2-registered-client-schema.sql"
+            encoding: "utf8"
+        - sqlFile:
+            path: "src/main/resources/db/changelog/oauth2-authorization-schema.sql"
+            encoding: "utf8"
+        - sqlFile:
+            path: "src/main/resources/db/changelog/oauth2-authorization-consent-schema.sql"
+            encoding: "utf8"
+  - changeSet:
+      id: "OAUTH-1"
+      author: "kujawad"
+      changes:
+        - createTable:
+            tableName: "users"
+            columns:
+              - column:
+                  name: "id"
+                  type: ${uuid_type}
+                  defaultValueComputed: ${uuid_function}
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+                    unique: true
+              - column:
+                  name: "username"
+                  type: "varchar(32)"
+                  constraints:
+                    nullable: false
+              - column:
+                  name: "password"
+                  type: "varchar(128)"
+                  constraints:
+                    nullable: false
+  - changeSet:
+      id: "OAUTH-2"
+      author: "kujawad"
+      changes:
+        - createTable:
+            tableName: "roles"
+            columns:
+              - column:
+                  name: "id"
+                  type: ${uuid_type}
+                  defaultValueComputed: ${uuid_function}
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+                    unique: true
+              - column:
+                  name: "name"
+                  type: "varchar(32)"
+                  constraints:
+                    nullable: false
+  - changeSet:
+      id: "OAUTH-3"
+      author: "kujawad"
+      changes:
+        - createTable:
+            tableName: "user_roles"
+            columns:
+              - column:
+                  name: "user_id"
+                  type: ${uuid_type}
+                  defaultValueComputed: ${uuid_function}
+                  constraints:
+                    nullable: false
+                    foreignKeyName: "user_id"
+                    references: users(id)
+              - column:
+                  name: "role_id"
+                  type: ${uuid_type}
+                  defaultValueComputed: ${uuid_function}
+                  constraints:
+                    nullable: false
+                    foreignKeyName: "role_id"
+                    references: roles(id)

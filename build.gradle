@@ -1,0 +1,98 @@
+plugins {
+	id 'java'
+	id 'org.springframework.boot' version '2.7.0'
+	id 'io.spring.dependency-management' version '1.0.11.RELEASE'
+	id 'org.graalvm.buildtools.native' version '0.9.17'
+	id 'org.liquibase.gradle' version '2.1.1'
+}
+
+group = 'org.kg'
+version = '0.0.1-SNAPSHOT'
+sourceCompatibility = '17'
+
+configurations {
+	compileOnly {
+		extendsFrom annotationProcessor
+	}
+}
+
+liquibase {
+	activities {
+		doFirst {
+			if (!project.hasProperty('runList')) {
+				project.ext.runList = 'local'
+			}
+		}
+		local {
+			changeLogFile 'src/main/resources/db/changelog/db.changelog-master.yaml'
+			defaultSchemaName 'oauth'
+			url 'jdbc:postgresql://localhost:5432/postgres_shared?currentSchema=oauth'
+			username 'postgres'
+			password 'postgres'
+			driver 'org.postgresql.Driver'
+			classpath "$rootDir"
+		}
+		prod {
+			changeLogFile 'src/main/resources/db/changelog/db.changelog-master.yaml'
+			defaultSchemaName 'oauth'
+			url System.getenv('JDBC_DATABASE_URL')
+			username System.getenv('JDBC_DATABASE_USERNAME')
+			password System.getenv('JDBC_DATABASE_PASSWORD')
+			driver 'org.postgresql.Driver'
+			classpath "$rootDir"
+		}
+	}
+	runList = project.ext.runList
+}
+
+repositories {
+	mavenCentral()
+	maven { url 'https://repo.spring.io/milestone' }
+}
+
+dependencies {
+	implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
+	implementation 'org.springframework.boot:spring-boot-starter-security'
+	implementation 'org.springframework.boot:spring-boot-starter-validation'
+	implementation 'org.springframework.boot:spring-boot-starter-web'
+	implementation 'org.springframework.security:spring-security-oauth2-authorization-server:0.3.1'
+	implementation 'org.springframework.security:spring-security-oauth2-jose'
+
+	annotationProcessor "org.springframework.boot:spring-boot-configuration-processor"
+
+	// Liquibase
+	liquibaseRuntime 'org.liquibase:liquibase-core:4.4.3'
+	liquibaseRuntime 'org.yaml:snakeyaml:1.32'
+	liquibaseRuntime 'info.picocli:picocli:4.6.3'
+	liquibaseRuntime 'org.postgresql:postgresql'
+
+	compileOnly 'org.projectlombok:lombok'
+	runtimeOnly 'org.postgresql:postgresql'
+	annotationProcessor 'org.projectlombok:lombok'
+
+	testImplementation 'org.springframework.boot:spring-boot-starter-test'
+	testImplementation 'org.springframework.security:spring-security-test'
+}
+
+tasks.named('test') {
+	useJUnitPlatform()
+}
+
+/*hibernate {
+	enhancement {
+		lazyInitialization true
+		dirtyTracking true
+		associationManagement true
+	}
+}*/
+
+task deleteLiquibaseUpdateDir(type: Delete) {
+	delete "${project.buildDir}/native/agent-output/update"
+}
+
+task local {
+	bootRun { systemProperty 'spring.profiles.active', 'local' }
+}
+
+bootRun.mustRunAfter local
+update.dependsOn deleteLiquibaseUpdateDir
